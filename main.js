@@ -6,7 +6,7 @@ let dots = []
 let collisions = []
 let width, height 
 
-const gridSpace = 20
+const gridSpace = 30
 const dotRadius = 2.5
 const maxSpeed = 30
 let graphX = 0
