@@ -29,6 +29,7 @@ class Dot {
         this.state = state
         this.fillStyle = ['#eee', '#f00', '#0ff', '#000'][state]
         if(state == 1) this.infectionTime = 0
+        else if(state == 3) this.vx = this.vy = 0
     }
 
     move(dt) {
@@ -144,6 +145,8 @@ class Simulator {
         this.contagiousness = 0.6
         this.simulationSpeed = 1
         this.lethality = 0.1
+        this.lockdown = 0
+        this.maxDotSpeed = 0
     }
 
     createDots(n) {
@@ -152,7 +155,7 @@ class Simulator {
         const h = this.height
     
         let r = 0.1*Math.sqrt(w*h/n)
-        let v = 10*r
+        let v = this.maxDotSpeed = 10*r
     
         const x0 = 2*r, y0 = 2*r
         const x1 = w-x0, y1 = h-y0
@@ -172,8 +175,14 @@ class Simulator {
             }  
             if(step<0) 
                 break // todo: add some diagnostic. we could not place the ith dot
-            dot.vx = 2*(Math.random()-0.5)*v
-            dot.vy = 2*(Math.random()-0.5)*v
+            if(i >= n * this.lockdown) {
+                dot.vx = 2*(Math.random()-0.5)*v
+                dot.vy = 2*(Math.random()-0.5)*v  
+                dot.locked = false  
+            } else {
+                dot.vx = dot.vy = 0
+                dot.locked = true  
+            }
             dot.index = i                       
             dots.push(dot)     
         }   
@@ -325,5 +334,23 @@ class Simulator {
         dots.forEach(dot => me.evolveDot(dot, stepDt))
     }
 
+    setLockdown(p) {
+        this.lockdown = p
+        let k = p*this.dots.length
+        for(let i=0; i<this.dots.length; i++) {
+            let locked = i<k
+            const dot = this.dots[i]
+            if(dot.locked != locked) {
+                dot.locked = locked
+                if(dot.locked) this.dots[i].vx = this.dots[i].vy = 0
+                else {
+                    const v = this.maxDotSpeed
+                    dot.vx = 2*(Math.random()-0.5)*v
+                    dot.vy = 2*(Math.random()-0.5)*v                          
+                }
+            }
+        }
+        this.initializeCollisions()
+    }
 }
 

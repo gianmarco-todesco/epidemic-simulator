@@ -1,16 +1,5 @@
 "use strict";
 
-/*
-let gCanvas, gCtx
-let currentTime
-let population
-let duration = 7
-let contagiousness
-
-let maxSpeed = 60
-let graphX = 0
-*/
-
 let viewer 
 let simulator
 let controls 
@@ -50,7 +39,7 @@ class Graph {
         sim.dots.forEach(dot => vs[dot.state]++)
         const n = sim.dots.length
         let x0 = this.x
-        let height = this.height - 12
+        let height = this.height - 10
         let factor = height/n
         let h1 = vs[1]*factor // infected
         let h2 = vs[2]*factor // recovered
@@ -58,11 +47,15 @@ class Graph {
         svg.rect(3,h1).fill('red').move(x0, height-5-h1)
         
         svg.rect(3,h3).fill('black').move(x0, 5)
-        svg.rect(3,h2).fill('cyan').move(x0, 6 + h3)
+        svg.rect(3,h2).fill('cyan').move(x0, 5 + h3)
         
         this.x += 4        
     }
 
+    clear() {
+        this.svg.clear()
+        this.x = 10
+    }
 
 }
 
@@ -152,13 +145,20 @@ function initControls() {
     })
 
     // simulationSpeed
-    sim.simulationSpeed = 1
+    sim.simulationSpeed = 3
     values = [...Array(5).keys()].map(i=>{
         let v = i + 1
         return {value:v, text:"x"+v}
     })
-    initSelect('simulation-speed', values, 1, (e) => {
+    initSelect('simulation-speed', values, sim.simulationSpeed, (e) => {
         sim.simulationSpeed = parseInt(e.target.value)
+    })
+
+    values = [...Array(9).keys()].map(i => {
+        return {value:i*0.1, text:i*10+"%"}
+    })
+    initSelect('lockdown', values, 0, (e) => {
+        sim.setLockdown(parseFloat(e.target.value))
     })
 }
 
@@ -210,6 +210,7 @@ function reset() {
     stop();
     simulator.createDots(simulator.dots.length)
     viewer.draw()
+    graph.clear()
 }
 
 function updateGraph() {

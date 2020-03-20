@@ -18,9 +18,22 @@ body {
 }
 
 .controls {
-    margin:30px;
+    margin-bottom:10px;
+    display: flex;
+    
 }
 
 .controls th {
     text-align: right;
+}
+
+
+.column {
+    
+
+}
+
+.right-column {
+    margin-left:50px;
+
 }
