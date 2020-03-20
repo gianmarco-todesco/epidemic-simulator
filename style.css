@@ -16,3 +16,11 @@ body {
     border:solid 1px black;
     box-shadow: 5px 5px 5px gray;
 }
+
+.controls {
+    margin:30px;
+}
+
+.controls th {
+    text-align: right;
+}

@@ -1,31 +1,215 @@
 "use strict";
-let canvas, ctx
+
+/*
 let gCanvas, gCtx
 let currentTime
-let dots = []
-let collisions = []
-let width, height 
+let population
+let duration = 7
+let contagiousness
 
-const gridSpace = 30
-const dotRadius = 2.5
-const maxSpeed = 30
+let maxSpeed = 60
 let graphX = 0
+*/
 
+let viewer 
+let simulator
+let controls 
+let graph 
+
+class Viewer {
+    constructor(canvasId, simulator) {
+        let canvas = this.canvas = document.getElementById(canvasId)
+        this.ctx= canvas.getContext('2d')
+        this.width = canvas.width = canvas.clientWidth
+        this.height = canvas.height = canvas.clientHeight   
+        this.simulator = simulator
+        simulator.width = this.width
+        simulator.height = this.height
+    }
+
+    draw() {
+        this.canvas.width = this.canvas.clientWidth
+        this.simulator.draw(this.ctx)
+    }
+}
+
+class Graph {
+    constructor(divId, simulator) {
+        this.simulator = simulator
+        this.svg = SVG(divId).size('100%', '100%')
+        this.x = 10
+        this.height = this.svg.parent().clientHeight
+
+    }
+
+    addMeasure() {
+        const sim = this.simulator
+        const svg = this.svg
+        this.day = Math.floor(sim.currentTime)
+        let vs = [0,0,0,0]
+        sim.dots.forEach(dot => vs[dot.state]++)
+        const n = sim.dots.length
+        let x0 = this.x
+        let height = this.height - 12
+        let factor = height/n
+        let h1 = vs[1]*factor // infected
+        let h2 = vs[2]*factor // recovered
+        let h3 = vs[3]*factor // deads
+        svg.rect(3,h1).fill('red').move(x0, height-5-h1)
+        
+        svg.rect(3,h3).fill('black').move(x0, 5)
+        svg.rect(3,h2).fill('cyan').move(x0, 6 + h3)
+        
+        this.x += 4        
+    }
+
+
+}
 
 window.onload = function() {
-    canvas = document.getElementById('c')
-    ctx = canvas.getContext('2d')
-    width = canvas.clientWidth
-    height = canvas.clientHeight    
-    currentTime = performance.now()*0.001
-    createDots()
-    animate()
+    simulator = new Simulator()
+    viewer = new Viewer('c', simulator)
+    initControls()
+    viewer.draw()
 
+
+    graph = new Graph('g', simulator)
+    
+    /*
+    currentTime = performance.now()*0.001
+    createDots(population)
+    // animate()
+    draw()
+    */
+
+    /*
     gCanvas = document.getElementById('g')
     gCtx = gCanvas.getContext('2d')
     gCanvas.width = gCanvas.clientWidth
     gCanvas.height = gCanvas.clientHeight
-    setInterval(updateGraph, 100)
+    */
+
+    // setInterval(updateGraph, 100)
+}
+
+
+function initSelect(id, lst, defValue, fn) {
+    let el = document.getElementById(id)
+    lst.forEach(x => {
+        let option = document.createElement("option");
+        if(typeof(x)=="number") option.value = option.text = x;
+        else {
+            option.value = x.value
+            option.text = x.text
+        }
+        el.appendChild(option)
+    })
+    el.value = defValue
+    el.onchange = fn
+}
+
+function initControls() {
+    controls = {}
+    controls.startStopBtn = document.getElementById('start-stop-btn')
+
+    const sim = simulator
+    let values
+
+    // population
+    let population = 700
+    initSelect('population', [200,300,400,500,600,700,800,900], population, (e) => {
+        stop()
+        let n = parseInt(e.target.value)
+        sim.createDots(n)
+        viewer.draw()
+    })
+    sim.createDots(population)
+
+    // duration
+    sim.duration = 14
+    initSelect('duration', [...Array(20).keys()].map(i=>1+i), sim.duration, (e) => {
+        stop()
+        sim.duration = parseInt(e.target.value)
+    })
+
+    // contagiousness
+    sim.contagiousness = 0.5
+    values = [...Array(9).keys()].map(i=>i+2).map(i=>{
+        return {value:i*0.1, text:i*10+"%"}
+    })
+    initSelect('contagiousness', values, sim.contagiousness, (e) => {
+        sim.contagiousness = parseFloat(e.target.value)
+    })
+
+    // lethality
+    sim.lethality = 0.1
+    values = [...Array(8).keys()].map(i=>{
+        let v = i+1
+        return {value:v*0.1, text:v*10+"%"}
+    })
+    initSelect('lethality', values, sim.lethality, (e) => {
+        sim.lethality = parseFloat(e.target.value)
+    })
+
+    // simulationSpeed
+    sim.simulationSpeed = 1
+    values = [...Array(5).keys()].map(i=>{
+        let v = i + 1
+        return {value:v, text:"x"+v}
+    })
+    initSelect('simulation-speed', values, 1, (e) => {
+        sim.simulationSpeed = parseInt(e.target.value)
+    })
+}
+
+
+function startStop() {
+    if(simulator.running) stop()
+    else start();
+}
+
+
+function start() {
+    if(simulator.running) return;
+    controls.startStopBtn.innerHTML = "Pause"
+    simulator.start()
+    simulator.running = true
+    const animate = () => {
+        if(simulator.running) {
+            simulator.step()
+            viewer.draw()
+
+            if(simulator.dots.filter(dot=>dot.state==1).length == 0) {
+                stop()
+                console.log(simulator.currentTime)
+            }
+
+            let day = Math.floor(simulator.currentTime)
+            if(graph.day != day) graph.addMeasure()
+            requestAnimationFrame(animate)    
+        }
+    }
+    animate()
+
+    /*
+    graphX = 0
+    gCanvas.width = gCanvas.clientWidth
+    running = true
+    animate()
+    */
+
+}
+
+function stop() {
+    if(!simulator.running) return;
+    simulator.running = false   
+    controls.startStopBtn.innerHTML = "Start"
+}
+
+function reset() {
+    stop();
+    simulator.createDots(simulator.dots.length)
+    viewer.draw()
 }
 
 function updateGraph() {
@@ -50,209 +234,9 @@ function updateGraph() {
     gCtx.fillRect(x,0,1,y)
     let y1 = h * nr / n
     gCtx.fillStyle = 'cyan'
-    gCtx.fillRect(x,y,1,y1)
-    
-    
+    gCtx.fillRect(x,y,1,y1)    
 }
 
-class Dot {
-    constructor(x,y,r,vx,vy) {
-        this.x = x
-        this.y = y
-        this.r = r
-        this.vx = vx
-        this.vy = vy
-        this.setState(0)  
-        this.infectionTime = null      
-    }
-
-    draw() {
-        ctx.beginPath()
-        ctx.moveTo(this.x+this.r, this.y)
-        ctx.arc(this.x, this.y, this.r, 0, 2*Math.PI)
-        ctx.fillStyle = this.fillStyle
-        ctx.fill()
-        ctx.strokeStyle = '#888'
-        ctx.stroke()
-    }
-
-    setState(state) {
-        this.state = state
-        this.fillStyle = ['#eee', '#f00', '#0ff', '#000'][state]
-        if(state == 1) this.infectionTime = currentTime
-    }
-
-    move(dt) {
-        this.x += this.vx * dt
-        this.y += this.vy * dt
-    }
-
-    reflect(dir, sgn) {
-        const rx = dir[0]*sgn
-        const ry = dir[1]*sgn        
-        const dot = 2*(rx*this.vx+ry*this.vy)
-        this.vx -= dot * rx
-        this.vy -= dot * ry
-    }
-
-    touch(other) {
-        if(this.state == 0 && other.state == 1) {
-            if(Math.random()<0.6) this.setState(1)
-        }
-    }
-
-    evolve() {
-        if(this.state == 1) {
-            if(currentTime - this.infectionTime > 14) {
-                this.setState(Math.random()<0.1 ? 3 : 2) 
-            }
-        }
-    } 
-
-    dist2From(b) {
-        let a = this
-        let dx = b.x-a.x
-        let dy = b.y-a.y
-        return dx*dx+dy*dy
-    }
-    distFrom(b) {
-        return Math.sqrt(this.dist2From(b))
-    }
-
-    computeOutFrameCollision(t) {
-        const w = width
-        const h = height
-        const r = this.r
-        const x0 = r, x1 = w-r
-        const y0 = r, y1 = h-r
-    
-        let minDt = Infinity
-        let dir = null
-        if(this.vx < 0) { 
-            let dt = (x0 - this.x)/this.vx; 
-            if(dt<minDt) { minDt=dt; dir = [1,0] }
-        } else if(this.vx>0) { 
-            let dt = (x1 - this.x)/this.vx; 
-            if(dt<minDt) { minDt=dt; dir = [-1,0] }
-        } 
-        if(this.vy<0) { 
-            let dt = (y0 - this.y)/this.vy; 
-            if(dt<minDt) { minDt=dt; dir = [0,1] }
-        } else if(this.vy>0) { 
-            let dt = (y1 - this.y)/this.vy; 
-            if(dt<minDt) { minDt=dt; dir = [0,-1] }
-        }
-        return {
-            t : t+minDt,
-            dir : dir,
-            a : this,
-            b : null
-        }
-    }
-
-    computeDotCollision(t, b) {
-        const a = this        
-        let x = b.x - a.x
-        let y = b.y - a.y
-        let vx = b.vx - a.vx
-        let vy = b.vy - a.vy
-        let d = a.r + b.r
-        // f(dt) =  (x+vx*dt)^2 + (y+vy*dt)^2 - d^2 
-        // = dt^2*(vx^2+vy^2) + 2 * dt * (x*vx + y*vy) + x^2+y^2-d^2 
-        let A = vx*vx + vy*vy
-        let B = x*vx + y*vy
-        let C = x*x + y*y - d*d
-        let dsc = B*B - A*C
-        if(dsc <= 0.0) return null
-        let q = Math.sqrt(dsc)
-
-        let t0 = (-B - q)/A 
-        let t1 = (-B + q)/A
-        if(t1<=0) return null;
-
-        if(t0<=0 && t1>0) {
-            if(t0>0.01) throw "uffa1"
-            // console.log("uhoh", t1-t0, t0, t1)
-            return null;
-        }
-
-        let dx = x + vx * t0
-        let dy = y + vy * t0
-        let dd = Math.sqrt(dx*dx+dy*dy)
-
-        let err = Math.abs(dd - d)
-        if(err>0.0001) console.log("Errore2 ", err)
-
-        return {
-            t : t+t0, 
-            dir : [dx/dd, dy/dd],
-            a : this,
-            b : b
-        }
-    }
-    
-}
-
-
-function createDots() {
-
-    const w = width
-    const h = height
-    const d = gridSpace
-    const r = dotRadius
-    const v = maxSpeed
-
-    const ny = Math.floor(h / d)
-    const nx = Math.floor(w / d)
-
-    const x0 = (w - (nx-1)*d)/2
-    const y0 = (h - (ny-1)*d)/2
-    
-    for(let iy=0; iy<ny; iy++) {
-        let y = y0 + d*iy
-        for(let ix=0; ix<nx; ix++) {
-            let x = x0 + d*ix
-            const vx = 2*(Math.random()-0.5)*v
-            const vy = 2*(Math.random()-0.5)*v            
-            let dot = new Dot(x,y,r,vx,vy)
-            dots.push(dot)
-        }
-    }
-    let i = 0
-    dots.forEach(dot=>dot.index = i++)
-    initializeCollisions()
-    setSeed()
-}
-
-function setSeed() {
-    let cx = width/2
-    let cy = height/2
-    let minDist = Infinity
-    let selectedDot = null
-    dots.forEach(dot => {
-        let dx = dot.x - cx
-        let dy = dot.y - cy
-        let r2 = dx*dx+dy*dy
-        if(r2<minDist) { minDist = r2; selectedDot = dot; }
-    })
-    selectedDot.setState(1)
-}
-
-
-function initializeCollisions()
-{
-    collisions = []
-    dots.forEach(dot => collisions.push(dot.computeOutFrameCollision(currentTime)))
-    const n = dots.length
-    for(let i=0; i<n; i++) {
-        let dot_i = dots[i]
-        for(let j=i+1; j<n; j++) {
-            let dot_j = dots[j]
-            let c = dot_i.computeDotCollision(currentTime, dot_j)            
-            if(c!=null) collisions.push(c)            
-        }
-    }
-}
 
 
 
@@ -262,11 +246,9 @@ function draw() {
     dots.forEach(dot => dot.draw())   
 }
 
-
-function animate() {
+function evolve(t) {
     let oldTime = currentTime
-    currentTime = performance.now() * 0.001
-
+    currentTime = t
     for(;;) {
         // find next collision
         let nextc = collisions[0]
@@ -323,7 +305,16 @@ function animate() {
         // updateCollisions(reflectedDots)
        // check()
     }
+    const dt = currentTime - oldTime
+    if(dt>0) dots.forEach(dot => dot.move(dt))  
+    dots.forEach(dot => dot.evolve())
+}
 
+function animate() {
+    let oldTime = currentTime
+    currentTime = performance.now() * 0.001
+
+    
     /*
     collisions.forEach(c=>{
         if(c.t<=oldTime) throw "help0."+c.a.index
@@ -343,9 +334,7 @@ function animate() {
     })
     */
 
-    const dt = currentTime - oldTime
-    if(dt>0) dots.forEach(dot => dot.move(dt))  
-    dots.forEach(dot => dot.evolve())
+    
     // check()
     draw()
     requestAnimationFrame(animate)

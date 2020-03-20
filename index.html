@@ -7,13 +7,49 @@
         <meta name="author" content="Gian Marco Todesco">
 
         <link rel="stylesheet" href="style.css"/>
+        <script src="simulator.js"></script>
         <script src="main.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.7.1/svg.min.js"></script>
     </head>
     <body>
         <p style="font-weight:bold"><span color="red">&#9888;</span>Work in progress! </p>
         <p>Source code: <a href="https://gianmarco-todesco.github.io/epidemic-simulator/">https://gianmarco-todesco.github.io/epidemic-simulator/</a></p>
         <!--button onclick="start()">Start</button-->
-        <canvas id="c"></canvas>       
-        <canvas id="g"></canvas>       
+        <div class="controls">
+            <table>
+                <tr>
+                    <th>Population</th>
+                    <td><select id="population"></select></td>
+                </tr>
+                <tr>
+                    <th>Infection duration</th>
+                    <td><select id="duration"></select></td>
+                </tr>
+                <tr>
+                    <th>Contagiousness</th>
+                    <td><select id="contagiousness"></select></td>
+                </tr>
+                <tr>
+                    <th>Lethality</th>
+                    <td><select id="lethality"></select></td>
+                </tr>
+            </table>
+            
+
+            <p>
+                <button onclick="reset()">Reset</button>
+                <button onclick="startStop()" id="start-stop-btn">Start</button>    
+            </p>
+            <p>
+                Simulation speed <select id="simulation-speed"></select>
+            </p>
+            
+        </div>
+        <div>
+            <canvas id="c"></canvas>       
+        </div>
+        <div>
+            <div id="g"></div>       
+        </div>
     </body>    
 </html>
