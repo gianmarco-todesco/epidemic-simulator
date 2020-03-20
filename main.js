@@ -22,6 +22,19 @@ class Viewer {
     }
 }
 
+function updateStats() {
+    const sim = simulator
+    const day = Math.floor(sim.currentTime || 0)
+    let vs = [0,0,0,0]
+    sim.dots.forEach(dot => vs[dot.state]++)
+    const n = sim.dots.length
+    document.getElementById('day').innerHTML = day
+    document.getElementById('infected-count').innerHTML = Math.floor(100*vs[1]/n)+"%"
+    document.getElementById('recovered-count').innerHTML = Math.floor(100*vs[2]/n)+"%"
+    document.getElementById('dead-count').innerHTML = Math.floor(100*vs[3]/n)+"%"
+
+}
+
 class Graph {
     constructor(divId, simulator) {
         this.simulator = simulator
@@ -48,6 +61,8 @@ class Graph {
         
         svg.rect(3,h3).fill('black').move(x0, 5)
         svg.rect(3,h2).fill('cyan').move(x0, 5 + h3)
+        
+        updateStats()
         
         this.x += 4        
     }
@@ -211,6 +226,7 @@ function reset() {
     simulator.createDots(simulator.dots.length)
     viewer.draw()
     graph.clear()
+    updateStats()
 }
 
 function updateGraph() {
